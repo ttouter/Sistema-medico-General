@@ -56,7 +56,18 @@ def alta_trabajadores_view(page: ft.Page, volver, datos_edicion=None):
     direccion = ft.TextField(label="Dirección completa", multiline=True)
     telefono = ft.TextField(label="Teléfono")
     correo = ft.TextField(label="Correo electrónico")
+    cedula = ft.TextField(label="Cédula Profesional", disabled=True)
 
+    def cambiar_puesto(e):
+        print("Seleccionado: ", puesto.value)
+
+        if puesto.value == "Médico General":
+            cedula.disabled = False
+        else:
+            cedula.disabled = True
+            cedula.value = ""
+        page.update()
+    
     # Dropdown creado sin el evento adentro
     puesto = ft.Dropdown(
         label="Puesto",
@@ -66,20 +77,9 @@ def alta_trabajadores_view(page: ft.Page, volver, datos_edicion=None):
             ft.dropdown.Option("Administrador"),
             ft.dropdown.Option("Mantenimiento"),
         ],
+        on_select=cambiar_puesto
+        
     )
-
-    cedula = ft.TextField(label="Cédula Profesional", disabled=True)
-
-    def cambiar_puesto(e):
-        if puesto.value == "Médico General":
-            cedula.disabled = False
-        else:
-            cedula.disabled = True
-            cedula.value = ""
-        page.update()
-
-    # Asignamos el evento DESPUÉS de crearlo
-    puesto.on_change = cambiar_puesto
 
     turno = ft.Dropdown(
         label="Turno",
