@@ -9,7 +9,7 @@ def caja_view(page: ft.Page, volver):
 
     # --- 2. CONTROLES VISUALES ---
     mensaje = ft.Text()
-    txt_total = ft.Text("Total: $0.00", size=28, weight=ft.FontWeight.BOLD, color=ft.Colors.BLUE_700)
+    txt_total = ft.Text("Total: $0.00", size=28, weight=ft.FontWeight.BOLD, color=ft.Colors.BLUE_700) # Nota: ft.Colors cambió a ft.colors en versiones recientes
     lista_resultados = ft.ListView(expand=True, spacing=5)
     
     # Tabla con márgenes reducidos para que quepa el botón
@@ -33,6 +33,21 @@ def caja_view(page: ft.Page, volver):
 
     switch_consulta = ft.Switch(label="Consulta General ($500)", value=False)
     switch_emergencia = ft.Switch(label="Consulta de Emergencia ($800)", value=False)
+
+    # NUEVO: Controles para mostrar la cita en el desglose
+    txt_cita_label = ft.Text("Tipo de Cita:", weight=ft.FontWeight.BOLD, color=ft.Colors.BLUE_GREY_800)
+    txt_cita_valor = ft.Text("")
+    txt_cita_costo = ft.Text("", weight=ft.FontWeight.W_500)
+    
+    fila_cita_desglose = ft.Row(
+        controls=[
+            txt_cita_label,
+            txt_cita_valor,
+            txt_cita_costo
+        ],
+        alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+        visible=False # Oculto por defecto hasta que se seleccione una consulta
+    )
 
     # --- 3. FUNCIONES LÓGICAS ---
     async def limpiar_mensaje():
@@ -109,10 +124,19 @@ def caja_view(page: ft.Page, volver):
         elif e and e.control == switch_consulta and switch_consulta.value:
             switch_emergencia.value = False
         
+        # NUEVO: Lógica para actualizar el desglose visual de la cita
         if switch_emergencia.value:
             costo_servicios = 800.0
+            txt_cita_valor.value = "Emergencia"
+            txt_cita_costo.value = "$800.00"
+            fila_cita_desglose.visible = True
         elif switch_consulta.value:
             costo_servicios = 500.0
+            txt_cita_valor.value = "General"
+            txt_cita_costo.value = "$500.00"
+            fila_cita_desglose.visible = True
+        else:
+            fila_cita_desglose.visible = False
         
         total_final = total_productos + costo_servicios
         txt_total.value = f"Total: ${total_final:.2f}"
@@ -215,6 +239,8 @@ def caja_view(page: ft.Page, volver):
                         expand=True
                     ),
                     ft.Divider(),
+                    # NUEVO: Se agregó la fila del desglose de la cita justo aquí
+                    fila_cita_desglose,
                     ft.Row([txt_total], alignment=ft.MainAxisAlignment.END),
                     ft.Row([btn_cobrar]),
                     mensaje

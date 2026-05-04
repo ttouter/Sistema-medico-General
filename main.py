@@ -10,7 +10,8 @@ def main(page: ft.Page):
     page.title = "MediLink - Sistema Médico"
     page.window.width = 950
     page.window.height = 650
-    
+    page.theme_mode = ft.ThemeMode.LIGHT
+    page.theme = ft.Theme(color_scheme_seed=ft.Colors.INDIGO)
     # Inicializamos la variable del rol directamente en el objeto 'page'
     page.rol_actual = "Ninguno"
 
@@ -186,7 +187,7 @@ def main(page: ft.Page):
     header = ft.Container(
         content=ft.Row(
             [
-                ft.Text("MediLink", size=24, weight="bold", color=ft.Colors.BLUE_800),
+                ft.Text("MediLink", size=24, weight="bold", color=ft.Colors.BLUE_400),
                 ft.TextButton(
                     "Cerrar Sesión", 
                     icon=ft.Icons.LOGOUT, 
@@ -197,18 +198,18 @@ def main(page: ft.Page):
             alignment=ft.MainAxisAlignment.SPACE_BETWEEN
         ),
         padding=ft.Padding(20, 10, 20, 10),
-        bgcolor=ft.Colors.CYAN_100,
+        bgcolor=ft.Colors.CYAN_200,
         border_radius=10
     )
 
     # Definición de Botones del Menú
     btn1 = ft.Container(
         content=ft.Column([ft.Icon(ft.Icons.PERSON, size=40), ft.Text("Paciente")], horizontal_alignment="center"),
-        padding=20, border_radius=10, ink=True, on_click=ir_cliente, width=150, height=120, bgcolor=ft.Colors.BLUE_50
+        padding=20, border_radius=10, ink=True, on_click=ir_cliente, width=150, height=120, bgcolor=ft.Colors.BLUE_100
     )
     btn2 = ft.Container(
         content=ft.Column([ft.Icon(ft.Icons.MEDICATION, size=40), ft.Text("Medicamentos")], horizontal_alignment="center"),
-        padding=20, border_radius=10, ink=True, on_click=ir_medicamento, width=150, height=120, bgcolor=ft.Colors.GREEN_50
+        padding=20, border_radius=10, ink=True, on_click=ir_medicamento, width=150, height=120, bgcolor=ft.Colors.GREEN_100
     )
 
     btn3 = ft.Container(
@@ -225,15 +226,15 @@ def main(page: ft.Page):
         on_click=ir_receta_completa,
         width=150,
         height=120,
-        bgcolor=ft.Colors.ORANGE_50
+        bgcolor=ft.Colors.ORANGE_100
     )
     btn_4 = ft.Container(
         content=ft.Column([ft.Icon(ft.Icons.MANAGE_ACCOUNTS, size=40), ft.Text("Personal")], horizontal_alignment="center"),
-        padding=20, border_radius=10, ink=True, on_click=ir_gestion_personal, width=150, height=120, bgcolor=ft.Colors.PURPLE_50
+        padding=20, border_radius=10, ink=True, on_click=ir_gestion_personal, width=150, height=120, bgcolor=ft.Colors.PURPLE_100
     )
     btn_5 = ft.Container(
         content=ft.Column([ft.Icon(ft.Icons.MONEY, size=40), ft.Text("Venta")], horizontal_alignment="center"),
-        padding=20, border_radius=10, ink=True, on_click=ir_venta, width=150, height=120, bgcolor=ft.Colors.TEAL_50
+        padding=20, border_radius=10, ink=True, on_click=ir_venta, width=150, height=120, bgcolor=ft.Colors.TEAL_100
     )
 
     # Ejecución inicial: Cargamos la pantalla de Login
