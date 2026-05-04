@@ -62,8 +62,8 @@ def main(page: ft.Page):
         page.views.append(
             gestion_personal_view(
                 page, 
-                ir_a_alta=ir_altaTra, # Formulario vacío
-                ir_a_editar=ir_editar_trabajador, # Formulario con datos
+                ir_a_alta=ir_altaTra, 
+                ir_a_editar=ir_editar_trabajador,   
                 volver=cargar_inicio
         )
     )
@@ -71,7 +71,7 @@ def main(page: ft.Page):
 
     def ir_editar_trabajador(datos_empleado):
         page.views.clear()
-    # Pasamos los datos del empleado a la vista de Alta para que los cargue
+        # Pasamos los datos del empleado a la vista de Alta para que los cargue
         page.views.append(alta_trabajadores_view(page, ir_gestion_personal, datos_empleado))
         page.update()
 
@@ -123,7 +123,7 @@ def main(page: ft.Page):
         content=ft.Column(
             [
                 ft.Icon(ft.Icons.RECEIPT_LONG, size=40),
-                ft.Text("Receta Completa")
+                ft.Text("Diagnostico")
             ],
             horizontal_alignment=ft.CrossAxisAlignment.CENTER
         ),

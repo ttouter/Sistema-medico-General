@@ -1,113 +1,106 @@
 # database/consultas.py
 from database.conexion import conectar
 
-def insertar_cliente(nombre, edad, sexo, fecha_nacimiento):
+# HELPERS INTERNOS
+
+
+def _ejecutar_sp_lectura(nombre_sp, params=()):
+    """Ejecuta un SP de lectura y devuelve lista de dicts."""
     conexion = conectar()
     if conexion is None:
-        return False
-        
+        return []
     try:
-        cursor = conexion.cursor()
-        
-        # Parámetros en el mismo orden que pide el procedimiento almacenado
-        valores = (nombre, edad, sexo, fecha_nacimiento)
-        
-        # Llamamos al procedimiento almacenado
-        cursor.callproc('sp_insertar_cliente', valores)
-        
-        conexion.commit()
-        return True
-        
+        cursor = conexion.cursor(dictionary=True)
+        cursor.callproc(nombre_sp, params)
+        resultados = []
+        for result in cursor.stored_results():
+            resultados.extend(result.fetchall())
+        return resultados
     except Exception as e:
-        print(f"Error en BD: {e}")
-        return False
-        
+        print(f"Error en SP {nombre_sp}: {e}")
+        return []
     finally:
         if conexion.is_connected():
             cursor.close()
             conexion.close()
 
+
+def _ejecutar_sp_escritura(nombre_sp, params=()):
+    """Ejecuta un SP de escritura y hace commit."""
+    conexion = conectar()
+    if conexion is None:
+        return False
+    try:
+        cursor = conexion.cursor()
+        cursor.callproc(nombre_sp, params)
+        conexion.commit()
+        return True
+    except Exception as e:
+        print(f"Error en SP {nombre_sp}: {e}")
+        return False
+    finally:
+        if conexion.is_connected():
+            cursor.close()
+            conexion.close()
+
+
+# CLIENTES
+
+def insertar_cliente(nombre, ap_paterno, ap_materno, edad, sexo, fecha_nacimiento,
+                     peso, talla, oxigenacion, presion, temperatura, correo):
+    return _ejecutar_sp_escritura(
+        'sp_insertar_cliente',
+        (nombre, ap_paterno, ap_materno, edad, sexo, fecha_nacimiento,
+         peso, talla, oxigenacion, presion, temperatura, correo)
+    )
+
+
+def obtener_todos_clientes():
+    return _ejecutar_sp_lectura('sp_obtener_todos_clientes')
+
+
+def buscar_clientes_por_apellido(termino):
+    return _ejecutar_sp_lectura('sp_buscar_clientes_por_apellido', (termino,))
+
+
+def actualizar_cliente_bd(id_cliente, nombre, ap_paterno, ap_materno, edad, sexo,
+                          fecha_nacimiento, peso, talla, oxigenacion,
+                          presion, temperatura, correo):
+    return _ejecutar_sp_escritura(
+        'sp_actualizar_cliente',
+        (id_cliente, nombre, ap_paterno, ap_materno, edad, sexo, fecha_nacimiento,
+         peso, talla, oxigenacion, presion, temperatura, correo)
+    )
+
+
+def buscar_paciente_duplicado(nombre, ap_paterno, ap_materno, fecha_nacimiento):
+    res = _ejecutar_sp_lectura(
+        'sp_buscar_paciente_duplicado',
+        (nombre, ap_paterno, ap_materno or '', fecha_nacimiento)
+    )
+    return res[0] if res else None
+
+
+# MEDICAMENTOS
+
 def insertar_medicamento(data):
+    """Devuelve (exito, mensaje)."""
     conexion = conectar()
     if conexion is None:
         return False, "Error de conexión a la base de datos"
-        
     try:
         cursor = conexion.cursor()
-        
-        # Preparamos los valores en el mismo orden que pide el procedimiento almacenado
         valores = (
-            data["nombre"], 
-            data["clasificacion"], 
-            data["presentacion"],
-            data["precio"], 
-            data["stock"], 
-            data["lote"],
-            data["precio_lote"], 
-            data["mg"], 
-            data["caducidad"],
-            data["fecha_alta"], 
-            data["farmaceutica"], 
-            data["descripcion"]
+            data["nombre"], data["clasificacion"], data["presentacion"],
+            data["precio"], data["stock"], data["lote"], data["precio_lote"],
+            data["mg"], data["caducidad"], data["fecha_alta"],
+            data["farmaceutica"], data["descripcion"]
         )
-        
-        # Llamamos al procedimiento almacenado
         cursor.callproc('sp_insertar_medicamento', valores)
-        
         conexion.commit()
         return True, "Medicamento registrado exitosamente."
-        
     except Exception as e:
-        # Aquí capturamos si hay un error, como un lote duplicado
         return False, str(e)
-        
-    finally:
-        if conexion.is_connected():
-            cursor.close()
-            conexion.close()
-
-def procesar_venta_completa(total, tipo_consulta, carrito):
-    """
-    carrito debe ser una lista de diccionarios, por ejemplo:
-    [
-        {"id_medicamento": 1, "cantidad": 2, "precio": 10.50, "subtotal": 21.00},
-        {"id_medicamento": 5, "cantidad": 1, "precio": 25.00, "subtotal": 25.00}
-    ]
-    """
-    conexion = conectar()
-    if conexion is None:
-        return False, "Error de conexión"
-        
-    try:
-        cursor = conexion.cursor()
-        
-        # 1. Llamar al SP de la cabecera de la venta
-        # El tercer parámetro es '0' porque es una variable OUT que MySQL va a llenar
-        resultado_venta = cursor.callproc('sp_crear_venta', (total, tipo_consulta, 0))
-        
-        # El ID de la venta recién creada nos lo devuelve en la posición 2 (el tercer parámetro)
-        id_nueva_venta = resultado_venta[2] 
-        
-        # 2. Recorrer el carrito y llamar al SP de detalles por cada producto
-        for item in carrito:
-            valores_detalle = (
-                id_nueva_venta,
-                item["id_medicamento"],
-                item["cantidad"],
-                item["precio"],
-                item["subtotal"]
-            )
-            cursor.callproc('sp_insertar_detalle', valores_detalle)
-            
-        # 3. Si todo salió bien con la cabecera y todos los detalles, guardamos los cambios
-        conexion.commit()
-        return True, "Venta registrada y stock actualizado correctamente."
-        
-    except Exception as e:
-        # Si algo falla (ej. no hay stock suficiente), revertimos todo para que no queden ventas a medias
-        conexion.rollback() 
-        return False, f"Error al procesar la venta: {e}"
-        
     finally:
         if conexion.is_connected():
             cursor.close()
@@ -115,117 +108,225 @@ def procesar_venta_completa(total, tipo_consulta, carrito):
 
 
 def buscar_medicamentos_bd(termino):
+    """Para venta/caja: devuelve tuplas (id, nombre, precio, stock)."""
     conexion = conectar()
     if conexion is None:
         return []
-        
     try:
         cursor = conexion.cursor()
-        # Buscamos por nombre y nos traemos: ID, Nombre, Precio y Stock
-        query = """
-            SELECT id_medicamento, nombre_producto, precio_unitario, stock 
-            FROM medicamentos 
-            WHERE nombre_producto LIKE %s AND stock > 0 
-            LIMIT 5
-        """
-        # El % alrededor del término permite buscar coincidencias parciales
-        cursor.execute(query, (f"%{termino}%",)) 
-        resultados = cursor.fetchall()
+        cursor.callproc('sp_buscar_medicamentos', (termino,))
+        resultados = []
+        for result in cursor.stored_results():
+            resultados.extend(result.fetchall())
         return resultados
-        
     except Exception as e:
-        print(f"Error al buscar: {e}")
+        print(f"Error al buscar medicamentos: {e}")
         return []
     finally:
         if conexion.is_connected():
             cursor.close()
             conexion.close()
 
-# Agregar dentro de database/consultas.py
-def insertar_trabajador(nombre, ap_paterno, ap_materno, fecha_nac, genero, curp, rfc, direccion, telefono, correo, puesto, cedula, turno, fecha_ingreso):
+
+def buscar_farmaceuticas(termino):
+    filas = _ejecutar_sp_lectura('sp_buscar_farmaceuticas', (termino,))
+    return [fila['farmaceutica'] for fila in filas if fila.get('farmaceutica')]
+
+
+def buscar_medicamento_existente(nombre, presentacion, cantidad_mg):
+    res = _ejecutar_sp_lectura(
+        'sp_buscar_medicamento_existente',
+        (nombre, presentacion, cantidad_mg)
+    )
+    return res[0] if res else None
+
+
+def reabastecer_medicamento(id_medicamento, stock_extra, nuevo_lote,
+                            precio_lote, caducidad, precio_unitario):
+    return _ejecutar_sp_escritura(
+        'sp_reabastecer_medicamento',
+        (id_medicamento, stock_extra, nuevo_lote, precio_lote,
+         caducidad, precio_unitario)
+    )
+
+
+# --- NUEVAS funciones para autocompletado / tabla / edición ---
+
+def autocompletar_medicamentos(termino):
+    """SP: sp_autocompletar_medicamentos - sugerencias mientras escribes."""
+    return _ejecutar_sp_lectura('sp_autocompletar_medicamentos', (termino,))
+
+
+def obtener_todos_medicamentos():
+    """SP: sp_obtener_todos_medicamentos - para la tabla completa."""
+    return _ejecutar_sp_lectura('sp_obtener_todos_medicamentos')
+
+
+def filtrar_medicamentos_por_clasificacion(clasificacion):
+    """SP: sp_filtrar_medicamentos_clasificacion"""
+    return _ejecutar_sp_lectura(
+        'sp_filtrar_medicamentos_clasificacion',
+        (clasificacion,)
+    )
+
+
+def actualizar_medicamento(id_med, clasificacion, precio_unit, stock,
+                           numero_lote, precio_lote, caducidad,
+                           farmaceutica, descripcion):
+    """SP: sp_actualizar_medicamento - edita campos no identitarios."""
+    return _ejecutar_sp_escritura(
+        'sp_actualizar_medicamento',
+        (id_med, clasificacion, precio_unit, stock, numero_lote,
+         precio_lote, caducidad, farmaceutica, descripcion)
+    )
+
+
+# VENTAS
+
+def procesar_venta_completa(total, tipo_consulta, carrito):
     conexion = conectar()
     if conexion is None:
-        return False
-        
+        return False, "Error de conexión"
     try:
         cursor = conexion.cursor()
-        
-        # Parámetros en el mismo orden que pide el procedimiento almacenado
-        valores = (nombre, ap_paterno, ap_materno, fecha_nac, genero, curp, rfc, direccion, telefono, correo, puesto, cedula, turno, fecha_ingreso)
-        
-        # Llamamos al procedimiento almacenado
-        cursor.callproc('sp_insertar_trabajador', valores)
-        
+        resultado_venta = cursor.callproc(
+            'sp_crear_venta', (total, tipo_consulta, 0))
+        id_nueva_venta = resultado_venta[2]
+        for item in carrito:
+            valores_detalle = (
+                id_nueva_venta, item["id_medicamento"], item["cantidad"],
+                item["precio"], item["subtotal"]
+            )
+            cursor.callproc('sp_insertar_detalle', valores_detalle)
         conexion.commit()
-        return True
-        
+        return True, "Venta registrada y stock actualizado correctamente."
     except Exception as e:
-        print(f"Error en BD (Trabajadores): {e}")
-        return False
-        
+        conexion.rollback()
+        return False, f"Error al procesar la venta: {e}"
     finally:
         if conexion.is_connected():
             cursor.close()
             conexion.close()
+
+
+# TRABAJADORES
+
+def insertar_trabajador(nombre, ap_paterno, ap_materno, fecha_nac, genero,
+                        curp, rfc, direccion, telefono, correo,
+                        puesto, cedula, turno, fecha_ingreso):
+    return _ejecutar_sp_escritura(
+        'sp_insertar_trabajador',
+        (nombre, ap_paterno, ap_materno, fecha_nac, genero,
+         curp, rfc, direccion, telefono, correo,
+         puesto, cedula, turno, fecha_ingreso)
+    )
+
 
 def obtener_trabajadores():
-    # 1. Colocamos TODO el intento de conexión dentro del try
+    return _ejecutar_sp_lectura('sp_obtener_todos_trabajadores')
+
+
+def actualizar_trabajador_bd(id_trabajador, nombre, ap_paterno, ap_materno,
+                             fecha_nac, genero, curp, rfc, direccion,
+                             telefono, correo, puesto, cedula, turno, fecha_ingreso):
+    return _ejecutar_sp_escritura(
+        'sp_actualizar_trabajador',
+        (id_trabajador, nombre, ap_paterno, ap_materno, fecha_nac, genero,
+         curp, rfc, direccion, telefono, correo,
+         puesto, cedula, turno, fecha_ingreso)
+    )
+
+
+def obtener_medico_por_id(id_medico):
+    resultados = _ejecutar_sp_lectura(
+        'sp_obtener_trabajador_por_id', (id_medico,))
+    return resultados[0] if resultados else None
+
+
+def buscar_trabajador_por_curp_rfc(curp, rfc):
+    res = _ejecutar_sp_lectura(
+        'sp_buscar_trabajador_por_curp_rfc', (curp, rfc))
+    return res[0] if res else None
+
+# HISTORIAL MÉDICO
+
+
+def guardar_historial_bd(id_cliente, id_medico, fecha, diagnostico, tratamiento):
+    return _ejecutar_sp_escritura(
+        'sp_insertar_historial',
+        (id_cliente, id_medico, fecha, diagnostico, tratamiento)
+    )
+
+
+def obtener_historial_bd(id_cliente):
+    return _ejecutar_sp_lectura('sp_obtener_historial_cliente', (id_cliente,))
+
+# HABILITAR Y DESAHBILITAR TRABAJADORES
+def obtener_trabajadores():
     try:
-        from database.conexion import conectar
-        conexion = conectar()
-        
-        if conexion is None: 
-            return []
-            
-        cursor = conexion.cursor(dictionary=True)
+        conn = conectar()
+        cursor = conn.cursor(dictionary=True)
+
         cursor.execute("SELECT * FROM trabajadores")
-        resultados = cursor.fetchall()
-        
+        datos = cursor.fetchall()
+
         cursor.close()
-        conexion.close()
-        
-        return resultados
-        
+        conn.close()
+
+        return datos
+
     except Exception as e:
-        # 2. Si XAMPP está apagado, Python cae aquí en lugar de romper la app
-        print(f"❌ Error de conexión al cargar trabajadores: {e}")
-        return [] # Retornamos una lista vacía para que Flet pueda dibujar la tabla sin datos
+        print("❌ Error obtener trabajadores:", e)
+        return []
 
-# 👇 AGREGA ESTA NUEVA FUNCIÓN AL FINAL DE database/consultas.py
 
-def actualizar_trabajador_bd(id_trabajador, nombre, ap_paterno, ap_materno, fecha_nac, genero, curp, rfc, direccion, telefono, correo, puesto, cedula, turno, fecha_ingreso):
-    # Asume que tienes importado conectar() al inicio del archivo
-    from database.conexion import conectar 
-    
-    conexion = conectar()
-    if conexion is None:
-        return False
-        
+def deshabilitar_trabajador(id_trabajador, observacion):
     try:
-        cursor = conexion.cursor()
-        
-        # Consulta SQL directa para actualizar todos los campos
-        query = """
-            UPDATE trabajadores 
-            SET nombre=%s, ap_paterno=%s, ap_materno=%s, fecha_nacimiento=%s, 
-                genero=%s, curp=%s, rfc=%s, direccion=%s, telefono=%s, 
-                correo=%s, puesto=%s, cedula_profesional=%s, turno=%s, fecha_ingreso=%s
-            WHERE id_trabajador=%s
-        """
-        
-        # Los valores deben ir en el mismo orden que los %s de arriba
-        valores = (nombre, ap_paterno, ap_materno, fecha_nac, genero, curp, rfc, direccion, 
-                telefono, correo, puesto, cedula, turno, fecha_ingreso, id_trabajador)
-        
-        cursor.execute(query, valores)
-        conexion.commit()
+        conn = conectar()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            UPDATE trabajadores
+            SET estado = 'INACTIVO',
+                observacion_salida = %s
+            WHERE id_trabajador = %s
+        """, (observacion, id_trabajador))
+
+        conn.commit()
+
+        print("✅ Trabajador deshabilitado")
+
+        cursor.close()
+        conn.close()
+
         return True
-        
+
     except Exception as e:
-        print(f"Error en BD (Actualizar Trabajador): {e}")
+        print("❌ Error deshabilitar:", e)
         return False
-        
-    finally:
-        if conexion.is_connected():
-            cursor.close()
-            conexion.close()
+
+
+def activar_trabajador(id_trabajador):
+    try:
+        conn = conectar()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            UPDATE trabajadores
+            SET estado = 'ACTIVO',
+                observacion_salida = NULL
+            WHERE id_trabajador = %s
+        """, (id_trabajador,))
+
+        conn.commit()
+
+        print("✅ Trabajador activado")
+
+        cursor.close()
+        conn.close()
+
+        return True
+
+    except Exception as e:
+        print("❌ Error activar:", e)
+        return False

@@ -1,34 +1,151 @@
-from database.consultas import insertar_cliente
+# logic/gestor_clientes.py
+from database.consultas import (
+    insertar_cliente,
+    actualizar_cliente_bd,
+    buscar_paciente_duplicado,
+)
+from logic.validators import (
+    validar_nombre, validar_entero, validar_decimal,
+    validar_email, validar_presion, validar_fecha,
+)
 
-def registrar_cliente(nombre, edad, sexo, fecha_nacimiento):
+class _ResultadoCliente(tuple):
     """
-    Recibe los datos de la vista, aplica reglas de negocio y los envía a la BD.
-    Retorna: (bool: exito, str: mensaje)
+    Compatible con desempaque de 2 o 3 valores.
     """
-    
-    # 1. Limpieza de datos (quitar espacios en blanco al inicio y final)
-    nombre = nombre.strip()
-    
-    # 2. Validación de reglas de negocio
-    # Verificar que la edad sea realmente un número y tenga sentido lógico
-    try:
-        edad_int = int(edad)
-        if edad_int <= 0 or edad_int > 120:
-            return False, "Por favor ingresa una edad válida (entre 1 y 120)."
-    except ValueError:
-        return False, "La edad debe ser un número entero."
+    def __new__(cls, exito, mensaje, extra=None):
+        return super().__new__(cls, (exito, mensaje, extra))
 
-    # Podrías agregar más validaciones aquí, por ejemplo:
-    # - Que el nombre tenga al menos 3 caracteres
-    if len(nombre) < 3:
-        return False, "El nombre es demasiado corto."
+    def __iter__(self):
+        # Por defecto desempaca 2 (compatibilidad con código viejo)
+        return iter((self[0], self[1]))
 
-    # 3. Interacción con la capa de Base de Datos
-    # Si pasa todas las validaciones, mandamos a ejecutar el procedimiento almacenado
-    exito = insertar_cliente(nombre, edad_int, sexo, fecha_nacimiento)
-    
-    # 4. Retornar la respuesta final a la vista
+    @property
+    def exito(self):    return self[0]
+    @property
+    def mensaje(self):  return self[1]
+    @property
+    def extra(self):    return self[2]
+
+
+def _validar_campos_paciente(nombre, ap_paterno, ap_materno, edad, sexo,
+                             fecha_nacimiento, peso, talla, oxigenacion,
+                             presion, temperatura, correo):
+    """Validaciones comunes para alta y edición."""
+
+    ok, msg = validar_nombre(nombre, "Nombre")
+    if not ok: return False, msg
+
+    ok, msg = validar_nombre(ap_paterno, "Apellido paterno")
+    if not ok: return False, msg
+
+    if ap_materno:
+        ok, msg = validar_nombre(ap_materno, "Apellido materno")
+        if not ok: return False, msg
+
+    if not sexo:
+        return False, "Sexo es obligatorio."
+
+    ok, msg = validar_fecha(fecha_nacimiento, "Fecha de nacimiento")
+    if not ok: return False, msg
+
+    ok, msg = validar_entero(edad, "Edad", min_val=1, max_val=120)
+    if not ok: return False, msg
+
+    ok, msg = validar_decimal(peso, "Peso", min_val=0.5, max_val=300, opcional=True)
+    if not ok: return False, msg
+
+    ok, msg = validar_decimal(talla, "Talla", min_val=30, max_val=250, opcional=True)
+    if not ok: return False, msg
+
+    ok, msg = validar_decimal(oxigenacion, "Oxigenación", min_val=0, max_val=100, opcional=True)
+    if not ok: return False, msg
+
+    ok, msg = validar_presion(presion, opcional=True)
+    if not ok: return False, msg
+
+    ok, msg = validar_decimal(temperatura, "Temperatura", min_val=30, max_val=45, opcional=True)
+    if not ok: return False, msg
+
+    ok, msg = validar_email(correo, opcional=True)
+    if not ok: return False, msg
+
+    return True, ""
+
+
+def _normalizar(nombre, ap_paterno, ap_materno, edad, peso, talla,
+                oxigenacion, presion, temperatura, correo):
+    return {
+        "nombre":      nombre.strip(),
+        "ap_paterno":  ap_paterno.strip(),
+        "ap_materno":  ap_materno.strip() if ap_materno else "",
+        "edad":        int(edad),
+        "peso":        float(peso) if peso else None,
+        "talla":       float(talla) if talla else None,
+        "oxigenacion": float(oxigenacion) if oxigenacion else None,
+        "presion":     presion.strip() if presion else None,
+        "temperatura": float(temperatura) if temperatura else None,
+        "correo":      correo.strip() if correo else None,
+    }
+
+
+def registrar_cliente(nombre, ap_paterno, ap_materno, edad, sexo,
+                      fecha_nacimiento, peso, talla, oxigenacion,
+                      presion, temperatura, correo,
+                      forzar_aunque_duplicado=False):
+    """Registra un cliente nuevo. Detecta duplicados."""
+
+    ok, msg = _validar_campos_paciente(
+        nombre, ap_paterno, ap_materno, edad, sexo, fecha_nacimiento,
+        peso, talla, oxigenacion, presion, temperatura, correo
+    )
+    if not ok:
+        return _ResultadoCliente(False, msg, None)
+
+    n = _normalizar(nombre, ap_paterno, ap_materno, edad, peso, talla,
+                    oxigenacion, presion, temperatura, correo)
+
+    if not forzar_aunque_duplicado:
+        duplicado = buscar_paciente_duplicado(
+            n["nombre"], n["ap_paterno"], n["ap_materno"], fecha_nacimiento
+        )
+        if duplicado:
+            return _ResultadoCliente(False, "DUPLICADO", duplicado)
+
+    exito = insertar_cliente(
+        n["nombre"], n["ap_paterno"], n["ap_materno"],
+        n["edad"], sexo, fecha_nacimiento,
+        n["peso"], n["talla"], n["oxigenacion"],
+        n["presion"], n["temperatura"], n["correo"]
+    )
+
     if exito:
-        return True, "Cliente registrado exitosamente."
-    else:
-        return False, "Error al guardar el registro en el sistema."
+        return _ResultadoCliente(True, "Cliente registrado correctamente.", None)
+    return _ResultadoCliente(False, "Error al guardar en la base de datos.", None)
+
+
+def actualizar_cliente(id_cliente, nombre, ap_paterno, ap_materno, edad, sexo,
+                      fecha_nacimiento, peso, talla, oxigenacion,
+                      presion, temperatura, correo):
+    """Actualiza un cliente existente."""
+    ok, msg = _validar_campos_paciente(
+        nombre, ap_paterno, ap_materno, edad, sexo, fecha_nacimiento,
+        peso, talla, oxigenacion, presion, temperatura, correo
+    )
+    if not ok:
+        return False, msg
+
+    n = _normalizar(nombre, ap_paterno, ap_materno, edad, peso, talla,
+                    oxigenacion, presion, temperatura, correo)
+
+    exito = actualizar_cliente_bd(
+        id_cliente,
+        n["nombre"], n["ap_paterno"], n["ap_materno"],
+        n["edad"], sexo, fecha_nacimiento,
+        n["peso"], n["talla"], n["oxigenacion"],
+        n["presion"], n["temperatura"], n["correo"]
+    )
+
+    if exito:
+        return True, "Cliente actualizado correctamente."
+    return False, "Error al actualizar en la base de datos."
