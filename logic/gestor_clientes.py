@@ -11,14 +11,10 @@ from logic.validators import (
 
 class _ResultadoCliente(tuple):
     """
-    Compatible con desempaque de 2 o 3 valores.
+    Desempaca los 3 valores (exito, mensaje, extra).
     """
     def __new__(cls, exito, mensaje, extra=None):
         return super().__new__(cls, (exito, mensaje, extra))
-
-    def __iter__(self):
-        # Por defecto desempaca 2 (compatibilidad con código viejo)
-        return iter((self[0], self[1]))
 
     @property
     def exito(self):    return self[0]
