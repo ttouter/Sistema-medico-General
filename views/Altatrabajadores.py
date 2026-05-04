@@ -72,10 +72,8 @@ def alta_trabajadores_view(page: ft.Page, volver, datos_edicion=None):
     ap_paterno  = tf_letras("Apellido Paterno")
     ap_materno  = tf_letras("Apellido Materno")
 
-    fecha_nac     = ft.TextField(label="Fecha de Nacimiento",
-                                 hint_text="AAAA-MM-DD", read_only=True, expand=True)
-    fecha_ingreso = ft.TextField(label="Fecha de Ingreso",
-                                 hint_text="AAAA-MM-DD", read_only=True, expand=True)
+    fecha_nac     = ft.TextField(label="Fecha de Nacimiento", hint_text="AAAA-MM-DD", read_only=True, expand=True)
+    fecha_ingreso = ft.TextField(label="Fecha de Ingreso", hint_text="AAAA-MM-DD", read_only=True, expand=True)
 
     def cambiar_fecha_nac(e):
         if date_picker_nac.value:
@@ -105,13 +103,12 @@ def alta_trabajadores_view(page: ft.Page, volver, datos_edicion=None):
         options=[ft.dropdown.Option("Masculino"), ft.dropdown.Option("Femenino")]
     )
 
-<<<<<<< HEAD
+
     curp      = tf_curp("CURP")
     rfc       = tf_rfc("RFC")
     direccion = tf_direccion("Dirección completa")
     telefono  = tf_numeros("Teléfono", max_len=10, keyboard=ft.KeyboardType.PHONE)
-    correo    = ft.TextField(label="Correo electrónico", expand=True,
-                             keyboard_type=ft.KeyboardType.EMAIL)
+    correo    = ft.TextField(label="Correo electrónico", expand=True, keyboard_type=ft.KeyboardType.EMAIL)
 
     cedula = tf_numeros("Cédula Profesional", max_len=8)
     cedula.helper_text = "Solo para Médico General"
@@ -128,8 +125,6 @@ def alta_trabajadores_view(page: ft.Page, volver, datos_edicion=None):
             cedula.border_color = None
         page.update()
         
-    
-=======
     curp = ft.TextField(label="CURP")
     rfc = ft.TextField(label="RFC")
     direccion = ft.TextField(label="Dirección completa", multiline=True)
@@ -146,9 +141,7 @@ def alta_trabajadores_view(page: ft.Page, volver, datos_edicion=None):
             cedula.disabled = True
             cedula.value = ""
         page.update()
-    
-    # Dropdown creado sin el evento adentro
->>>>>>> 2b2a85e0dab4a9b140b5bc57e67ccac12206ae08
+
     puesto = ft.Dropdown(
         label="Puesto", expand=True,
         options=[
@@ -157,12 +150,7 @@ def alta_trabajadores_view(page: ft.Page, volver, datos_edicion=None):
             ft.dropdown.Option("Administrador"),
             ft.dropdown.Option("Mantenimiento"),
         ],
-<<<<<<< HEAD
-        on_select= cambiar_puesto
-=======
         on_select=cambiar_puesto
-        
->>>>>>> 2b2a85e0dab4a9b140b5bc57e67ccac12206ae08
     )
 
     turno = ft.Dropdown(

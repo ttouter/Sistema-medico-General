@@ -161,11 +161,7 @@ def main(page: ft.Page):
             gestion_personal_view(
                 page, 
                 ir_a_alta=ir_altaTra, 
-<<<<<<< HEAD
                 ir_a_editar=ir_editar_trabajador,   
-=======
-                ir_a_editar=ir_editar_trabajador, 
->>>>>>> 2b2a85e0dab4a9b140b5bc57e67ccac12206ae08
                 volver=cargar_inicio
             )
         )
@@ -178,10 +174,7 @@ def main(page: ft.Page):
 
     def ir_editar_trabajador(datos_empleado):
         page.views.clear()
-<<<<<<< HEAD
         # Pasamos los datos del empleado a la vista de Alta para que los cargue
-=======
->>>>>>> 2b2a85e0dab4a9b140b5bc57e67ccac12206ae08
         page.views.append(alta_trabajadores_view(page, ir_gestion_personal, datos_empleado))
         page.update()
 
@@ -217,12 +210,12 @@ def main(page: ft.Page):
         content=ft.Column([ft.Icon(ft.Icons.MEDICATION, size=40), ft.Text("Medicamentos")], horizontal_alignment="center"),
         padding=20, border_radius=10, ink=True, on_click=ir_medicamento, width=150, height=120, bgcolor=ft.Colors.GREEN_50
     )
+
     btn3 = ft.Container(
-<<<<<<< HEAD
         content=ft.Column(
             [
                 ft.Icon(ft.Icons.RECEIPT_LONG, size=40),
-                ft.Text("Diagnostico")
+                ft.Text("Receta")
             ],
             horizontal_alignment=ft.CrossAxisAlignment.CENTER
         ),
@@ -231,11 +224,8 @@ def main(page: ft.Page):
         ink=True,
         on_click=ir_receta_completa,
         width=150,
-        height=120
-=======
-        content=ft.Column([ft.Icon(ft.Icons.RECEIPT_LONG, size=40), ft.Text("Receta Completa")], horizontal_alignment="center"),
-        padding=20, border_radius=10, ink=True, on_click=ir_receta_completa, width=150, height=120, bgcolor=ft.Colors.ORANGE_50
->>>>>>> 2b2a85e0dab4a9b140b5bc57e67ccac12206ae08
+        height=120,
+        bgcolor=ft.Colors.ORANGE_50
     )
     btn_4 = ft.Container(
         content=ft.Column([ft.Icon(ft.Icons.MANAGE_ACCOUNTS, size=40), ft.Text("Personal")], horizontal_alignment="center"),
