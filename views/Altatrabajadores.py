@@ -105,6 +105,7 @@ def alta_trabajadores_view(page: ft.Page, volver, datos_edicion=None):
         options=[ft.dropdown.Option("Masculino"), ft.dropdown.Option("Femenino")]
     )
 
+<<<<<<< HEAD
     curp      = tf_curp("CURP")
     rfc       = tf_rfc("RFC")
     direccion = tf_direccion("Dirección completa")
@@ -128,6 +129,26 @@ def alta_trabajadores_view(page: ft.Page, volver, datos_edicion=None):
         page.update()
         
     
+=======
+    curp = ft.TextField(label="CURP")
+    rfc = ft.TextField(label="RFC")
+    direccion = ft.TextField(label="Dirección completa", multiline=True)
+    telefono = ft.TextField(label="Teléfono")
+    correo = ft.TextField(label="Correo electrónico")
+    cedula = ft.TextField(label="Cédula Profesional", disabled=True)
+
+    def cambiar_puesto(e):
+        print("Seleccionado: ", puesto.value)
+
+        if puesto.value == "Médico General":
+            cedula.disabled = False
+        else:
+            cedula.disabled = True
+            cedula.value = ""
+        page.update()
+    
+    # Dropdown creado sin el evento adentro
+>>>>>>> 2b2a85e0dab4a9b140b5bc57e67ccac12206ae08
     puesto = ft.Dropdown(
         label="Puesto", expand=True,
         options=[
@@ -136,7 +157,12 @@ def alta_trabajadores_view(page: ft.Page, volver, datos_edicion=None):
             ft.dropdown.Option("Administrador"),
             ft.dropdown.Option("Mantenimiento"),
         ],
+<<<<<<< HEAD
         on_select= cambiar_puesto
+=======
+        on_select=cambiar_puesto
+        
+>>>>>>> 2b2a85e0dab4a9b140b5bc57e67ccac12206ae08
     )
 
     turno = ft.Dropdown(
