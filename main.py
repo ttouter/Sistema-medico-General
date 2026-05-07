@@ -11,8 +11,7 @@ def main(page: ft.Page):
     page.title = "MediLink - Sistema Médico"
     page.window.width = 950
     page.window.height = 650
-    page.theme = tema_medico
-    page.bgcolor = COLOR_FONDO
+    page.theme_mode = ft.ThemeMode.LIGHT
     # Inicializamos la variable del rol directamente en el objeto 'page'
     page.rol_actual = "Ninguno"
 
