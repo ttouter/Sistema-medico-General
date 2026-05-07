@@ -5,12 +5,13 @@ from views.RecetaCompleta import receta_completa_view
 from views.Altatrabajadores import alta_trabajadores_view
 from views.venta import caja_view
 from views.GestionPersonal import gestion_personal_view
+from estilos import tema_medico
 
 def main(page: ft.Page):
     page.title = "MediLink - Sistema Médico"
     page.window.width = 950
     page.window.height = 650
-    page.theme_mode = ft.ThemeMode.LIGHT
+    page.theme = tema
     page.theme = ft.Theme(color_scheme_seed=ft.Colors.INDIGO)
     # Inicializamos la variable del rol directamente en el objeto 'page'
     page.rol_actual = "Ninguno"
