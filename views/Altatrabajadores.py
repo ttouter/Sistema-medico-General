@@ -5,6 +5,7 @@ from logic.validators import (
     filtrar_letras, filtrar_numeros, filtrar_curp, filtrar_rfc,
     filtrar_direccion,
 )
+from theme.estilos import COLOR_ALERTA, COLOR_EXITO, estilo_boton_principal
 
 
 def alta_trabajadores_view(page: ft.Page, volver, datos_edicion=None):
@@ -230,7 +231,7 @@ def alta_trabajadores_view(page: ft.Page, volver, datos_edicion=None):
 
     titulo_vista = "Editar Personal Médico" if datos_edicion else "Registro de Personal Médico"
     texto_boton  = "Guardar Cambios"         if datos_edicion else "Guardar"
-    btn_guardar  = ft.ElevatedButton(texto_boton, icon=ft.Icons.SAVE, on_click=guardar)
+    btn_guardar  = ft.ElevatedButton(texto_boton, icon=ft.Icons.SAVE, on_click=guardar, style=estilo_boton_principal)
 
     # ============================================================
     # LAYOUT

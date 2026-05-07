@@ -46,7 +46,7 @@ tema_medico = ft.Theme(
 
 # Estilo para botones como "Guardar" o "Registrar"
 estilo_boton_principal = ft.ButtonStyle(
-    color=ft.colors.WHITE,
+    color=ft.Colors.WHITE,
     bgcolor=COLOR_PRIMARIO,
     padding=15,
     shape=ft.RoundedRectangleBorder(radius=8)
@@ -54,7 +54,7 @@ estilo_boton_principal = ft.ButtonStyle(
 
 # Estilo para botones secundarios
 estilo_boton_secundario = ft.ButtonStyle(
-    color=ft.colors.WHITE,
+    color=ft.Colors.WHITE,
     bgcolor=COLOR_SECUNDARIO,
     padding=15,
     shape=ft.RoundedRectangleBorder(radius=8)
