@@ -3,16 +3,17 @@ from database.consultas import (
     insertar_cliente,
     actualizar_cliente_bd,
     buscar_paciente_duplicado,
+    buscar_cliente_por_correo,
 )
 from logic.validators import (
     validar_nombre, validar_entero, validar_decimal,
-    validar_email, validar_presion, validar_fecha,
+    validar_email, validar_presion, validar_fecha_pasada,
+    validar_edad_coherente,
 )
 
+
 class _ResultadoCliente(tuple):
-    """
-    Desempaca los 3 valores (exito, mensaje, extra).
-    """
+    """Desempaca los 3 valores (exito, mensaje, extra)."""
     def __new__(cls, exito, mensaje, extra=None):
         return super().__new__(cls, (exito, mensaje, extra))
 
@@ -27,43 +28,55 @@ class _ResultadoCliente(tuple):
 def _validar_campos_paciente(nombre, ap_paterno, ap_materno, edad, sexo,
                              fecha_nacimiento, peso, talla, oxigenacion,
                              presion, temperatura, correo):
-    """Validaciones comunes para alta y edición."""
+    """
+    Valida los campos del paciente. TODOS son obligatorios.
+    """
 
+    # ---- DATOS PERSONALES (todos obligatorios) ----
     ok, msg = validar_nombre(nombre, "Nombre")
     if not ok: return False, msg
 
     ok, msg = validar_nombre(ap_paterno, "Apellido paterno")
     if not ok: return False, msg
 
-    if ap_materno:
-        ok, msg = validar_nombre(ap_materno, "Apellido materno")
-        if not ok: return False, msg
+    # AHORA ap_materno es obligatorio
+    ok, msg = validar_nombre(ap_materno, "Apellido materno")
+    if not ok: return False, msg
 
     if not sexo:
         return False, "Sexo es obligatorio."
 
-    ok, msg = validar_fecha(fecha_nacimiento, "Fecha de nacimiento")
+    ok, msg = validar_fecha_pasada(fecha_nacimiento, "Fecha de nacimiento")
     if not ok: return False, msg
 
-    ok, msg = validar_entero(edad, "Edad", min_val=1, max_val=120)
+    ok, msg = validar_entero(edad, "Edad", min_val=0, max_val=120)
     if not ok: return False, msg
 
-    ok, msg = validar_decimal(peso, "Peso", min_val=0.5, max_val=300, opcional=True)
+    ok, msg = validar_edad_coherente(edad, fecha_nacimiento, tolerancia=1)
     if not ok: return False, msg
 
-    ok, msg = validar_decimal(talla, "Talla", min_val=30, max_val=250, opcional=True)
+    # ---- SIGNOS VITALES (ahora todos obligatorios) ----
+    ok, msg = validar_decimal(peso, "Peso", min_val=0.5, max_val=300,
+                              opcional=False)
     if not ok: return False, msg
 
-    ok, msg = validar_decimal(oxigenacion, "Oxigenación", min_val=0, max_val=100, opcional=True)
+    ok, msg = validar_decimal(talla, "Talla", min_val=30, max_val=250,
+                              opcional=False)
     if not ok: return False, msg
 
-    ok, msg = validar_presion(presion, opcional=True)
+    ok, msg = validar_decimal(oxigenacion, "Oxigenación",
+                              min_val=0, max_val=100, opcional=False)
     if not ok: return False, msg
 
-    ok, msg = validar_decimal(temperatura, "Temperatura", min_val=30, max_val=45, opcional=True)
+    ok, msg = validar_presion(presion, opcional=False)
     if not ok: return False, msg
 
-    ok, msg = validar_email(correo, opcional=True)
+    ok, msg = validar_decimal(temperatura, "Temperatura",
+                              min_val=30, max_val=45, opcional=False)
+    if not ok: return False, msg
+
+    # ---- CORREO (ahora obligatorio) ----
+    ok, msg = validar_email(correo, opcional=False)
     if not ok: return False, msg
 
     return True, ""
@@ -74,22 +87,22 @@ def _normalizar(nombre, ap_paterno, ap_materno, edad, peso, talla,
     return {
         "nombre":      nombre.strip(),
         "ap_paterno":  ap_paterno.strip(),
-        "ap_materno":  ap_materno.strip() if ap_materno else "",
+        "ap_materno":  ap_materno.strip(),
         "edad":        int(edad),
-        "peso":        float(peso) if peso else None,
-        "talla":       float(talla) if talla else None,
-        "oxigenacion": float(oxigenacion) if oxigenacion else None,
-        "presion":     presion.strip() if presion else None,
-        "temperatura": float(temperatura) if temperatura else None,
-        "correo":      correo.strip() if correo else None,
+        "peso":        float(peso),
+        "talla":       float(talla),
+        "oxigenacion": float(oxigenacion),
+        "presion":     presion.strip(),
+        "temperatura": float(temperatura),
+        "correo":      correo.strip().lower(),
     }
 
 
 def registrar_cliente(nombre, ap_paterno, ap_materno, edad, sexo,
                       fecha_nacimiento, peso, talla, oxigenacion,
-                      presion, temperatura, correo,
+                      presion, temperatura, correo, direccion,
                       forzar_aunque_duplicado=False):
-    """Registra un cliente nuevo. Detecta duplicados."""
+    """Registra un cliente nuevo. Detecta duplicados por nombre+fecha y por correo."""
 
     ok, msg = _validar_campos_paciente(
         nombre, ap_paterno, ap_materno, edad, sexo, fecha_nacimiento,
@@ -100,6 +113,16 @@ def registrar_cliente(nombre, ap_paterno, ap_materno, edad, sexo,
 
     n = _normalizar(nombre, ap_paterno, ap_materno, edad, peso, talla,
                     oxigenacion, presion, temperatura, correo)
+
+    dup_correo = buscar_cliente_por_correo(n["correo"])
+    if dup_correo:
+        return _ResultadoCliente(
+            False,
+            f"Ya existe un paciente con ese correo: "
+            f"{dup_correo['nombre']} {dup_correo['ap_paterno']} "
+            f"(ID {dup_correo['id_cliente']}).",
+            None
+        )
 
     if not forzar_aunque_duplicado:
         duplicado = buscar_paciente_duplicado(
@@ -112,7 +135,8 @@ def registrar_cliente(nombre, ap_paterno, ap_materno, edad, sexo,
         n["nombre"], n["ap_paterno"], n["ap_materno"],
         n["edad"], sexo, fecha_nacimiento,
         n["peso"], n["talla"], n["oxigenacion"],
-        n["presion"], n["temperatura"], n["correo"]
+        n["presion"], n["temperatura"], n["correo"],
+        direccion
     )
 
     if exito:
@@ -122,7 +146,7 @@ def registrar_cliente(nombre, ap_paterno, ap_materno, edad, sexo,
 
 def actualizar_cliente(id_cliente, nombre, ap_paterno, ap_materno, edad, sexo,
                       fecha_nacimiento, peso, talla, oxigenacion,
-                      presion, temperatura, correo):
+                      presion, temperatura, correo, direccion):
     """Actualiza un cliente existente."""
     ok, msg = _validar_campos_paciente(
         nombre, ap_paterno, ap_materno, edad, sexo, fecha_nacimiento,
@@ -134,12 +158,20 @@ def actualizar_cliente(id_cliente, nombre, ap_paterno, ap_materno, edad, sexo,
     n = _normalizar(nombre, ap_paterno, ap_materno, edad, peso, talla,
                     oxigenacion, presion, temperatura, correo)
 
+    dup_correo = buscar_cliente_por_correo(n["correo"])
+    if dup_correo and dup_correo.get('id_cliente') != id_cliente:
+        return False, (
+            f"Ese correo ya pertenece a otro paciente "
+            f"({dup_correo['nombre']} {dup_correo['ap_paterno']})."
+        )
+
     exito = actualizar_cliente_bd(
         id_cliente,
         n["nombre"], n["ap_paterno"], n["ap_materno"],
         n["edad"], sexo, fecha_nacimiento,
         n["peso"], n["talla"], n["oxigenacion"],
-        n["presion"], n["temperatura"], n["correo"]
+        n["presion"], n["temperatura"], n["correo"],
+        direccion
     )
 
     if exito:

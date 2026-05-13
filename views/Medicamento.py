@@ -168,28 +168,46 @@ def medicamento_view(page: ft.Page, volver):
     nombre.on_change = buscar_med
 
     def cargar_medicamento(med):
-        """Llena el formulario con los datos del medicamento seleccionado."""
-        state["id_editando"]            = med['id_medicamento']
-        nombre.value                    = med['nombre_producto']
-        clasificacion.value             = med['clasificacion']
-        presentacion.value              = med['presentacion']
-        precio.value                    = str(med['precio_unitario'])
-        stock.value                     = str(med['stock'])
-        lote.value                      = med.get('numero_lote') or ''
-        precio_lote.value               = str(med['precio_lote']) if med.get('precio_lote') else ''
-        mg.value                        = str(med['cantidad_mg'])
-        caducidad.value                 = str(med['fecha_caducidad']) if med.get('fecha_caducidad') else ''
-        fecha_alta.value                = str(med.get('fecha_alta') or '')
-        farmaceutica.value              = med.get('farmaceutica') or ''
-        descripcion.value               = med.get('descripcion') or ''
+        """Precarga datos de un medicamento existente para registrar un NUEVO LOTE.
+        NO entra en modo edición: al guardar se creará un registro nuevo."""
 
-        # Bloquear identidad (no se puede cambiar)
+        # IMPORTANTE: NO ponemos state["id_editando"] porque queremos que
+        # se cree un registro NUEVO, no que se actualice el existente.
+
+        # Guardar valores ORIGINALES para validar que el nuevo lote sea distinto
+        state["lote_original"]      = med.get('numero_lote') or ''
+        state["caducidad_original"] = str(med['fecha_caducidad']) if med.get('fecha_caducidad') else ''
+
+        # Llenar identidad y datos de referencia (lo que típicamente se mantiene)
+        nombre.value         = med['nombre_producto']
+        clasificacion.value  = med['clasificacion']
+        presentacion.value   = med['presentacion']
+        precio.value         = str(med['precio_unitario'])
+        mg.value             = str(med['cantidad_mg'])
+        farmaceutica.value   = med.get('farmaceutica') or ''
+        descripcion.value    = med.get('descripcion') or ''
+
+        # 👇 Campos del NUEVO lote: vacíos, los captura el usuario
+        stock.value     = ""
+        lote.value      = ""
+        caducidad.value = ""
+        precio_lote.value = ""
+        fecha_alta.value  = datetime.now().strftime("%Y-%m-%d")
+
+        # Bloquear identidad (porque debe ser el mismo medicamento conceptualmente)
         nombre.read_only = True
         presentacion.disabled = True
         mg.read_only = True
 
         sugerencias_med.controls.clear()
         actualizar_modo_botones()
+
+        mensaje.value = (
+            "📦 Registrando NUEVO LOTE del medicamento. "
+            "Captura número de lote, stock y fecha de caducidad del lote que llegó."
+        )
+        mensaje.color = "blue"
+
         page.update()
 
     # ============================================================
@@ -261,6 +279,11 @@ def medicamento_view(page: ft.Page, volver):
         mg.read_only = False
 
         state["id_editando"] = None
+        
+        state["lote_original"] = ""
+        state["caducidad_original"] = ""
+        state["fecha_alta_original"] = ""
+        
         actualizar_modo_botones()
         page.update()
 
@@ -373,7 +396,7 @@ def medicamento_view(page: ft.Page, volver):
     def accion_principal(e):
         data = construir_data()
 
-        # MODO EDICIÓN
+        # ===== MODO EDICIÓN REAL (botón lápiz de la tabla) =====
         if state["id_editando"]:
             ok, msj = actualizar_med(state["id_editando"], data)
             mensaje.value = msj
@@ -385,37 +408,48 @@ def medicamento_view(page: ft.Page, volver):
             page.run_task(limpiar_mensaje)
             return
 
-        # MODO ALTA (con detección de duplicado)
-        resultado = registrar_medicamento(data)
-        ok        = resultado[0]
-        msj       = resultado[1]
-        existente = resultado[2]
+        # ===== MODO ALTA (nuevo medicamento O nuevo lote de uno existente) =====
 
-        if not ok and msj == "DUPLICADO" and existente:
-            state["duplicado_detectado"] = existente
-            try:
-                stock_extra = int(stock.value)
-            except (ValueError, TypeError):
-                stock_extra = 0
-            info_existente.value = (
-                f"Ya existe en inventario:\n\n"
-                f"  • {existente['nombre_producto']} ({existente['presentacion']}, "
-                f"{existente['cantidad_mg']} mg)\n"
-                f"  • Stock actual: {existente['stock']} unidades\n"
-                f"  • Lote actual: {existente.get('numero_lote', '—')}\n\n"
-                f"Si reabasteces, se sumarán {stock_extra} unidades "
-                f"(quedará en {existente['stock'] + stock_extra}) "
-                f"y se actualizarán los datos del nuevo lote."
-            )
-            dialogo_reabastecer.open = True
-            page.update()
-            return
+        # Si viene de hacer clic en una sugerencia, validar que lote y caducidad
+        # sean DIFERENTES a los del lote original
+        viene_de_sugerencia = bool(state.get("lote_original")) or bool(state.get("caducidad_original"))
+        if viene_de_sugerencia:
+            lote_actual = (lote.value or "").strip()
+            cad_actual  = (caducidad.value or "").strip()
+
+            if lote_actual == state.get("lote_original", ""):
+                mensaje.value = ("El número de lote es el mismo que el registrado. "
+                                 "Un lote nuevo debe tener un número distinto.")
+                mensaje.color = "red"
+                page.update()
+                page.run_task(limpiar_mensaje)
+                return
+
+            if cad_actual == state.get("caducidad_original", ""):
+                mensaje.value = ("La fecha de caducidad es la misma que la del lote anterior. "
+                                 "Un lote nuevo debe tener fecha de caducidad distinta.")
+                mensaje.color = "red"
+                page.update()
+                page.run_task(limpiar_mensaje)
+                return
+
+        # Pasamos forzar_nuevo=True para que NO trate de detectar duplicado:
+        # queremos un registro nuevo siempre.
+        resultado = registrar_medicamento(data, forzar_nuevo=True)
+        ok  = resultado[0]
+        msj = resultado[1]
+
+        # Mensaje personalizado si era un lote nuevo de uno existente
+        if ok and viene_de_sugerencia:
+            msj = "✓ Nuevo lote registrado correctamente."
 
         mensaje.value = msj
         mensaje.color = "green" if ok else "red"
+
         if ok:
             limpiar_campos()
             recargar_tabla()
+
         page.update()
         page.run_task(limpiar_mensaje)
 

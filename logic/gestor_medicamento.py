@@ -7,6 +7,7 @@ from database.consultas import (
 )
 from logic.validators import (
     validar_decimal, validar_entero, validar_fecha,
+    validar_fecha_futura,
 )
 
 
@@ -21,7 +22,8 @@ def _validar_campos_medicamento(data, requerir_identidad=True):
             return False, "Nombre del producto debe tener al menos 2 caracteres."
         if not data.get("presentacion"):
             return False, "Presentación es obligatoria."
-        ok, msg = validar_entero(data.get("mg"), "Cantidad mg", min_val=1, max_val=100000)
+        ok, msg = validar_entero(data.get("mg"), "Cantidad mg",
+                                 min_val=1, max_val=100000)
         if not ok: return False, msg
 
     if not data.get("clasificacion"):
@@ -31,7 +33,8 @@ def _validar_campos_medicamento(data, requerir_identidad=True):
                               min_val=0.01, max_val=100000)
     if not ok: return False, msg
 
-    ok, msg = validar_entero(data.get("stock"), "Stock", min_val=0, max_val=1000000)
+    ok, msg = validar_entero(data.get("stock"), "Stock",
+                             min_val=0, max_val=1000000)
     if not ok: return False, msg
 
     if not data.get("lote") or len(str(data["lote"]).strip()) < 1:
@@ -41,7 +44,9 @@ def _validar_campos_medicamento(data, requerir_identidad=True):
                               min_val=0.01, max_val=10000000, opcional=True)
     if not ok: return False, msg
 
-    ok, msg = validar_fecha(data.get("caducidad"), "Fecha de caducidad")
+    # Fecha de caducidad: debe ser HOY o posterior, no en el pasado
+    ok, msg = validar_fecha_futura(data.get("caducidad"),
+                                   "Fecha de caducidad", incluir_hoy=True)
     if not ok: return False, msg
 
     if not data.get("farmaceutica") or len(str(data["farmaceutica"]).strip()) < 2:
@@ -131,13 +136,17 @@ def actualizar(id_medicamento, data):
 def reabastecer(id_medicamento, stock_extra, nuevo_lote, precio_lote,
                 caducidad, precio_unitario):
     """Suma stock al medicamento existente."""
-    ok, msg = validar_entero(stock_extra, "Stock a agregar", min_val=1)
+    ok, msg = validar_entero(stock_extra, "Stock a agregar",
+                             min_val=1, max_val=1000000)
     if not ok: return False, msg
 
-    ok, msg = validar_decimal(precio_unitario, "Precio unitario", min_val=0.01)
+    ok, msg = validar_decimal(precio_unitario, "Precio unitario",
+                              min_val=0.01, max_val=100000)
     if not ok: return False, msg
 
-    ok, msg = validar_fecha(caducidad, "Fecha de caducidad")
+    # La caducidad del NUEVO lote debe ser hoy o posterior
+    ok, msg = validar_fecha_futura(caducidad, "Fecha de caducidad",
+                                   incluir_hoy=True)
     if not ok: return False, msg
 
     if not nuevo_lote or len(str(nuevo_lote).strip()) < 1:
