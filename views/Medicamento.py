@@ -76,8 +76,16 @@ def medicamento_view(page: ft.Page, volver):
     # ============================================================
     # CAMPOS DEL FORMULARIO
     # ============================================================
-    nombre = ft.TextField(label="Nombre del Producto", expand=True,
-                          hint_text="Empieza a escribir para ver sugerencias...")
+    nombre = ft.TextField(
+        label="Nombre del Medicamento *", 
+        expand=True,
+        input_filter=ft.InputFilter(
+            allow=True,
+            regex_string=r"[a-zAÁÉÍÓÚáéíóúÑñÜü0-9\s\-]",
+            replacement_string=""
+        ), 
+        hint_text="Empieza a escribir para ver sugerencias...")
+
     sugerencias_med = ft.Column(spacing=0)
 
     clasificacion = ft.Dropdown(

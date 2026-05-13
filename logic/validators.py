@@ -329,3 +329,31 @@ def validar_direccion_completa(valor):
         return False, "Debes incluir calle, número y colonia separados por espacios."
         
     return True, ""
+
+def validar_nombre_medicamento(valor, min_len=2):
+    valor = (valor or "").strip()
+    if not valor:
+        return False, "El nombre del medicamento es obligatorio."
+    if len(valor) < min_len:
+        return False, f"El nombre debe tener al menos {min_len} caracteres."
+    
+    # Permitir letras, números, espacios y guiones (Rechaza símbolos extraños como @, #, $, etc.)
+    if re.search(r"[^A-Za-zÁÉÍÓÚáéíóúÑñÜü0-9\s\-]", valor):
+        return False, "El nombre del medicamento contiene caracteres no válidos."
+    return True, ""
+
+def validar_formato_lote(valor):
+    """Valida que el lote tenga el formato exacto de L seguido de 3 números (Ej: L001, L999)"""
+    valor = (valor or "").strip().upper() # Lo convertimos a mayúscula por si escribieron 'l' minúscula
+    
+    if not valor:
+        return False, "El lote es obligatorio."
+    
+    # ^L significa "Empieza con L"
+    # \d{3} significa "Exactamente 3 dígitos (0-9)"
+    # $ significa "Termina ahí"
+    if not re.match(r"^L\d{3}$", valor):
+        return False, "Formato de lote inválido. Debe ser 'L' seguido de 3 números (Ej: L001)."
+    
+    return True, ""
+
