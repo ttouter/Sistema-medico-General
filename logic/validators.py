@@ -313,3 +313,19 @@ def limpiar_error(textfield):
     """Quita el estado de error del TextField."""
     textfield.error_text = None
     textfield.border_color = None
+
+def validar_direccion_completa(valor):
+    """Verifica que la dirección contenga al menos 3 palabras (calle, número, colonia) y un número."""
+    s = (valor or "").strip()
+    if not s:
+        return False, "La calle, número y colonia son obligatorios."
+    
+    # Verificar que tenga al menos un número (para el número de casa)
+    if not re.search(r'\d', s):
+        return False, "La dirección debe contener un número (ej. #123)."
+        
+    # Verificar que tenga al menos 3 partes (ej. 'Calle', '12', 'Centro')
+    if len(s.split()) < 3:
+        return False, "Debes incluir calle, número y colonia separados por espacios."
+        
+    return True, ""

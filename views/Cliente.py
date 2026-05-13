@@ -2,7 +2,7 @@ import flet as ft
 import asyncio
 from logic.gestor_clientes import registrar_cliente, actualizar_cliente
 from logic.validators import (
-    filtrar_letras, filtrar_numeros, filtrar_numeros_decimal, filtrar_presion,
+    filtrar_letras, filtrar_numeros, filtrar_numeros_decimal, filtrar_presion, validar_direccion_completa
 )
 from database.consultas import (
     obtener_todos_clientes,
@@ -257,6 +257,14 @@ def cliente_view(page: ft.Page, volver):
     # GUARDAR (insertar o actualizar)
     # ============================================================
     def _guardar_real(forzar=False):
+        ok_dir, msg_dir = validar_direccion_completa(direccion.value)
+        if not ok_dir:
+            mensaje.value = msg_dir
+            mensaje.color = "red"
+            page.update()
+            page.run_task(limpiar_msg)
+            return
+        
         # Armar dirección completa (formato: "calle | Ciudad | Estado | País")
         partes_dir = [
             (direccion.value or "").strip(),

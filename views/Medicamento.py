@@ -116,7 +116,7 @@ def medicamento_view(page: ft.Page, volver):
     sugerencias_farm = ft.Column(spacing=0)
 
     descripcion = ft.TextField(
-        label="Descripción", multiline=True,
+        label="Descripción *", multiline=True,
         min_lines=2, max_lines=4, expand=True
     )
 
@@ -396,6 +396,13 @@ def medicamento_view(page: ft.Page, volver):
     def accion_principal(e):
         data = construir_data()
 
+        if not data["descripcion"]:
+            mensaje.value = "La descripción del medicamento es obligatoria."
+            mensaje.color = "red"
+            page.update()
+            page.run_task(limpiar_mensaje)
+            return
+        
         # ===== MODO EDICIÓN REAL (botón lápiz de la tabla) =====
         if state["id_editando"]:
             ok, msj = actualizar_med(state["id_editando"], data)
